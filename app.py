@@ -1,52 +1,74 @@
-from flask import Flask, jsonify, request
-import json
-import os
+from flask import Flask, render_template, request, redirect, jsonify
+import sqlite3
 
 app = Flask(__name__)
 
-DATA_FILE = "problems.json"
+# DB connection
+def get_db():
+    return sqlite3.connect("database.db")
 
-# Load data
-def load_problems():
-    if not os.path.exists(DATA_FILE):
-        return []
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
+# Create table (run once)
+def init_db():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS practice (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            problem TEXT,
+            topic TEXT,
+            status TEXT,
+            time_spent INTEGER
+        )
+    """)
+    conn.commit()
+    conn.close()
 
-# Save data
-def save_problems(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+init_db()
 
-# Home route
+# Home page
 @app.route('/')
 def home():
-    return "Code Practice Tracker Running!"
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM practice")
+    data = cursor.fetchall()
+    conn.close()
+    return render_template("index.html", data=data)
 
-# GET all problems
-@app.route('/problems', methods=['GET'])
-def get_problems():
-    data = load_problems()
+# Add record
+@app.route('/add', methods=['POST'])
+def add():
+    data = request.form
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO practice (date, problem, topic, status, time_spent)
+        VALUES (?, ?, ?, ?, ?)
+    """, (data['date'], data['problem'], data['topic'], data['status'], data['time']))
+    conn.commit()
+    conn.close()
+    return redirect('/')
+
+# Delete record
+@app.route('/delete/<int:id>')
+def delete(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM practice WHERE id=?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect('/')
+
+# API (for Postman)
+@app.route('/api/data')
+def api_data():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM practice")
+    data = cursor.fetchall()
+    conn.close()
     return jsonify(data)
 
-# ADD new problem
-@app.route('/problems', methods=['POST'])
-def add_problem():
-    data = load_problems()
-    new_problem = request.json
-    data.append(new_problem)
-    save_problems(data)
-    return jsonify(new_problem), 201
-
-# DELETE problem
-@app.route('/problems/<int:index>', methods=['DELETE'])
-def delete_problem(index):
-    data = load_problems()
-    if index < len(data):
-        removed = data.pop(index)
-        save_problems(data)
-        return jsonify(removed)
-    return jsonify({"error": "Invalid index"}), 404
-
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)

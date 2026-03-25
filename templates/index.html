@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Code Practice Tracker</title>
+</head>
+<body>
+
+<h1>Code Practice Tracker</h1>
+
+<form method="POST" action="/add">
+    <input name="date" placeholder="Date (YYYY-MM-DD)" required>
+    <input name="problem" placeholder="Problem Name" required>
+    <input name="topic" placeholder="Topic" required>
+    <input name="status" placeholder="Solved/Unsolved" required>
+    <input name="time" placeholder="Time (minutes)" required>
+    <button type="submit">Add</button>
+</form>
+
+<h2>Records</h2>
+
+<table border="1">
+<tr>
+    <th>Date</th>
+    <th>Problem</th>
+    <th>Topic</th>
+    <th>Status</th>
+    <th>Time</th>
+    <th>Action</th>
+</tr>
+
+{% for row in data %}
+<tr>
+    <td>{{row[1]}}</td>
+    <td>{{row[2]}}</td>
+    <td>{{row[3]}}</td>
+    <td>{{row[4]}}</td>
+    <td>{{row[5]}}</td>
+    <td><a href="/delete/{{row[0]}}">Delete</a></td>
+</tr>
+{% endfor %}
+
+</table>
+
+</body>
+</html>
